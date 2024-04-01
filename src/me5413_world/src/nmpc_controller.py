@@ -8,10 +8,8 @@
  # u: [v, omega]
  """
 
-
 import casadi as ca
 import numpy as np
-
 
 
 class NMPCC:
@@ -23,7 +21,7 @@ class NMPCC:
         N=10,
         Q=np.diag([10, 10, 10]),
         R=np.diag([0, 0]),
-        Qf=np.zeros([3,3]),#None,
+        Qf=np.zeros([3, 3]),  # None,
         solver_params: dict = None,
         prob_params: dict = None,  # optimal control problem parameters
         integrator="euler",
@@ -46,19 +44,18 @@ class NMPCC:
         self.integrator = integrator
 
         self.opti = ca.Opti()
-        self.control_dim = prob_params["control_dim"] #2
-        self.state_dim = prob_params["state_dim"] #3
+        self.control_dim = prob_params["control_dim"]  # 2
+        self.state_dim = prob_params["state_dim"]  # 3
 
         # create casadi parameters
         self.ca_params = {
             "Q": self.opti.parameter(self.state_dim, self.state_dim),
             "R": self.opti.parameter(self.control_dim, self.control_dim),
             "Qf": self.opti.parameter(self.state_dim, self.state_dim),
-            # "neighbor_pos": self.opti.parameter(1, 2),
         }
         prob_params["Q"] = Q
         prob_params["R"] = R
-        prob_params["Qf"] = Qf
+        prob_params["Qf"] = Q
         for param, value in prob_params.items():
             if isinstance(value, (int, float)):
                 self.ca_params[param] = self.opti.parameter(1)
@@ -74,7 +71,6 @@ class NMPCC:
             self.opti.set_value(self.ca_params["Qf"], Q)
         else:
             self.opti.set_value(self.ca_params["Qf"], Qf)
-        # self.opti.set_value(self.ca_params["neighbor_pos"], np.array([1, 1])) # TODO
 
         # print("NMPCC Parameters".ljust(50, "-"))
         # print("{:<25}: {}".format("init_pose", prob_params["init_pose"]))
@@ -121,10 +117,6 @@ class NMPCC:
         # dz = self.var_states[:, 5]
         # control variables
         self.var_controls = self.opti.variable(self.N, self.control_dim)
-        # thrust = self.var_controls[:, 0]
-        # phi = self.var_controls[:, 1]  # roll
-        # theta = self.var_controls[:, 2]  # pitch
-        # psi = self.var_controls[:, 3]  # yaw
         v = self.var_controls[:, 0]
         omega = self.var_controls[:, 1]
 
@@ -132,25 +124,9 @@ class NMPCC:
         self.x_ref = self.opti.parameter(self.N + 1, self.state_dim)
 
         # dynamics differential equation
-        ## uav dynamics in NED frame
-        # self.dde = lambda x_, u_: ca.vertcat(
-        #     *[
-        #         x_[3],  # dx
-        #         x_[4],  # dy
-        #         x_[5],  # dz
-        #         -u_[0]
-        #         / self.ca_params["mass"]
-        #         * (ca.cos(u_[3]) * ca.sin(u_[2]) * ca.cos(u_[1]) + ca.sin(u_[3]) * ca.sin(u_[1])),  # ddx
-        #         -u_[0]
-        #         / self.ca_params["mass"]
-        #         * (ca.sin(u_[3]) * ca.sin(u_[2]) * ca.cos(u_[1]) - ca.cos(u_[3]) * ca.sin(u_[1])),  # ddy
-        #         g - u_[0] / self.ca_params["mass"] * (ca.cos(u_[1]) * ca.cos(u_[2])),  # ddz
-        #     ]
-        # )
-
         self.dde = lambda x_, u_: ca.vertcat(
             *[
-                x_[0] + np.cos(x_[2]) * u_[0] * self.T,  
+                x_[0] + np.cos(x_[2]) * u_[0] * self.T,
                 x_[1] + np.sin(x_[2]) * u_[0] * self.T,
                 x_[2] + u_[1] * self.T,
             ]
@@ -160,22 +136,6 @@ class NMPCC:
         cost = 0
         for i in range(self.N + 1):
             state_error_ = self.var_states[i, :] - self.x_ref[i, :]
-            # if state_error_[2] > np.pi:
-            #     state_error_[2] = 2 * np.pi - state_error_[2]
-            # elif state_error_[2] < -np.pi:
-            #     state_error_[2] = 2 * np.pi + state_error_[2]
-
-
-            # pi = ca.pi
-            # state_error_2 = state_error_[2]
-            # state_error_2 = ca.if_else(state_error_2 > pi, state_error_2 - pi, state_error_2)
-            # state_error_2 = ca.if_else(state_error_2 < -pi, state_error_2 + pi, state_error_2)
-            # state_error_ = ca.horzcat(state_error_[:2], state_error_2)
-
-            # np.pi cannot be used in casadi
-            # limit the angle error to -pi to pi
-            # state_error_[2] = ca.if_else(state_error_[2] > ca.pi, state_error_[2] - 2 * ca.pi, state_error_[2])
-            # state_error_[2] = ca.if_else(state_error_[2] < -ca.pi, state_error_[2] + 2 * ca.pi, state_error_[2])
             if i < self.N:
                 control_error_ = self.var_controls[i, :] - self.u_ref[i, :]
                 cost = (
@@ -198,15 +158,14 @@ class NMPCC:
                 # x_next = self.var_states[i, :] + self.dde(self.var_states[i, :], self.var_controls[i, :]).T * self.T
                 x_next = self.dde(self.var_states[i, :], self.var_controls[i, :]).T
             elif self.integrator == "rk4":
-                x_next = self.runge_kutta(self.dde, self.T, self.var_states[i, :], self.var_controls[i, :].T) #没改，有问题，dde算的就是下一个状态
+                x_next = self.runge_kutta(
+                    self.dde, self.T, self.var_states[i, :], self.var_controls[i, :].T
+                )  # 没改，有问题，dde算的就是下一个状态
             self.opti.subject_to(self.var_states[i + 1, :] == x_next)
 
         ## input limits
-        self.opti.subject_to(self.opti.bounded(0, v, self.ca_params["max_thrust"]))
-        self.opti.subject_to(self.opti.bounded(-2.2, omega, 2.2))
-
-
-
+        # self.opti.subject_to(self.opti.bounded(0.1, v, self.ca_params["max_vel"]))
+        self.opti.subject_to(self.opti.bounded(-self.ca_params["max_omega"], omega, self.ca_params["max_omega"]))
 
         if solver_params is not None:
             opts_setting = solver_params
@@ -252,14 +211,6 @@ class NMPCC:
         k4 = f(x + dt * k3.T, u)
         new_x = x + dt / 6 * (k1.T + 2 * k2.T + 2 * k3.T + k4.T)
         return new_x
-
-    def add_constraints(self, constraints):
-        # TODO
-        pass
-
-    def add_cost(self, cost):
-        # TODO
-        pass
 
 
 if __name__ == "__main__":
