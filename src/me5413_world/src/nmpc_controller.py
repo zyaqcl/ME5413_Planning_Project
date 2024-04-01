@@ -19,9 +19,9 @@ class NMPCC:
 
     def __init__(
         self,
-        T=1,
+        T=0.5,
         N=10,
-        Q=np.diag([10, 10, 10]),
+        Q=np.diag([10, 10, 0]),
         R=np.diag([0, 0]),
         Qf=np.zeros([3,3]),#None,
         solver_params: dict = None,
@@ -167,15 +167,15 @@ class NMPCC:
 
 
             # pi = ca.pi
-            # state_error_2 = state_error_[2]
-            # state_error_2 = ca.if_else(state_error_2 > pi, state_error_2 - pi, state_error_2)
-            # state_error_2 = ca.if_else(state_error_2 < -pi, state_error_2 + pi, state_error_2)
-            # state_error_ = ca.horzcat(state_error_[:2], state_error_2)
+            # state_error_2 = state_error_[0, 2]
+            # state_error_2 = ca.if_else(state_error_2 > pi, state_error_2 - 2 * pi, state_error_2)
+            # state_error_2 = ca.if_else(state_error_2 < -pi, state_error_2 + 2 * pi, state_error_2)
+            # state_error_ = ca.horzcat(state_error_[0,0], state_error_[0, 1], state_error_2)
 
             # np.pi cannot be used in casadi
             # limit the angle error to -pi to pi
-            # state_error_[2] = ca.if_else(state_error_[2] > ca.pi, state_error_[2] - 2 * ca.pi, state_error_[2])
-            # state_error_[2] = ca.if_else(state_error_[2] < -ca.pi, state_error_[2] + 2 * ca.pi, state_error_[2])
+            # state_error_[0, 2] = ca.if_else(state_error_[0, 2] > ca.pi, state_error_[0, 2] -  ca.pi, state_error_[0, 2])
+            # state_error_[0, 2] = ca.if_else(state_error_[0, 2] < -ca.pi, state_error_[0, 2] +  ca.pi, state_error_[0, 2])
             if i < self.N:
                 control_error_ = self.var_controls[i, :] - self.u_ref[i, :]
                 cost = (
