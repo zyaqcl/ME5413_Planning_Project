@@ -21,7 +21,7 @@ class NMPCC:
         self,
         T=0.2,
         N=10,
-        Q=np.diag([5, 5, 1]),
+        Q=np.diag([5, 5, 0]),
         R=np.diag([5, 1]),
         Qf=np.zeros([3,3]),#None,
         solver_params: dict = None,
