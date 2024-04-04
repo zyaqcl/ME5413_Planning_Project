@@ -17,11 +17,11 @@ class NMPCC:
 
     def __init__(
         self,
-        T=1,
+        T=0.2,
         N=10,
-        Q=np.diag([10, 10, 10]),
-        R=np.diag([0, 0]),
-        Qf=np.zeros([3, 3]),  # None,
+        Q=np.diag([5, 5, 0]),
+        R=np.diag([5, 1]),
+        Qf=np.zeros([3,3]),#None,
         solver_params: dict = None,
         prob_params: dict = None,  # optimal control problem parameters
         integrator="euler",
