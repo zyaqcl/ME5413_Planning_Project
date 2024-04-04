@@ -80,7 +80,7 @@ namespace me5413_world
       PARAMS_UPDATED = false;
     }
     publishGlobalPath();
-    // publishLocalPath(this->odom_world_robot_.pose.pose, LOCAL_PREV_WP_NUM, LOCAL_NEXT_WP_NUM);
+    publishLocalPath(this->odom_world_robot_.pose.pose, LOCAL_PREV_WP_NUM, LOCAL_NEXT_WP_NUM);
 
     // Calculate absolute errors (wrt to world frame)
     const std::pair<double, double> abs_errors = calculatePoseError(this->odom_world_robot_.pose.pose, this->pose_world_goal_);

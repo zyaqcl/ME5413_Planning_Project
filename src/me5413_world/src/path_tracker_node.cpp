@@ -122,8 +122,8 @@ geometry_msgs::Twist PathTrackerNode::computeControlOutputs(const nav_msgs::Odom
 
 int main(int argc, char** argv)
 {
-  // ros::init(argc, argv, "path_tracker_node");
-  // me5413_world::PathTrackerNode path_tracker_node;
-  // ros::spin();  // spin the ros node.
-  // return 0;
+  ros::init(argc, argv, "path_tracker_node");
+  me5413_world::PathTrackerNode path_tracker_node;
+  ros::spin();  // spin the ros node.
+  return 0;
 }
