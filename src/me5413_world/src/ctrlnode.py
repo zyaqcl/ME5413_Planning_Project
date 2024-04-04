@@ -69,15 +69,72 @@ class PathTrackerNode1:
     def find_nearest_point(self):
         if self.global_path is None or self.curr_pose is None:
             return None
+
         min_dist = float("inf")
+        selected_idx = None
+        robot_x, robot_y = self.curr_pose[0], self.curr_pose[1]
+        robot_heading = self.curr_pose[2]
+
         for i, pose in enumerate(self.global_path.poses):
-            dist = math.sqrt(
-                (pose.pose.position.x - self.curr_pose[0]) ** 2 + (pose.pose.position.y - self.curr_pose[1]) ** 2
-            )
-            if dist < min_dist:
+            point_x, point_y = pose.pose.position.x, pose.pose.position.y
+            base2point_yaw = math.atan2(point_y - robot_y, point_x - robot_x)
+            dist = math.sqrt((point_x - robot_x) ** 2 + (point_y - robot_y) ** 2)
+
+            # Calculate the absolute angle difference between robot heading and base2point_yaw
+            angle_diff = abs(robot_heading - base2point_yaw)
+            angle_diff = min(angle_diff, 2 * math.pi - angle_diff)  # Normalize angle to be within [0, π]
+
+            # Threshold for angle difference can be adjusted. Here it's set to π/4 radians (45 degrees)
+            if dist < min_dist and angle_diff <= math.pi / 4:
                 min_dist = dist
-                path_point_idx = i
-        return path_point_idx
+                selected_idx = i
+
+        return selected_idx
+
+    def quat_to_tum(self, quaternion):
+        """
+        Convert ROS quaternion to TUM format (qx, qy, qz, qw).
+        """
+        return (quaternion.x, quaternion.y, quaternion.z, quaternion.w)
+
+    def output_tum_format(self, odom):
+        """
+        Output the trajectory tracking data in TUM format given an Odometry message.
+        """
+        # Extract the timestamp
+        timestamp = odom.header.stamp.to_sec()
+
+        # Extract position data
+        position = odom.pose.pose.position
+        x, y, z = position.x, position.y, position.z
+
+        # Extract orientation data in TUM format
+        orientation = self.quat_to_tum(odom.pose.pose.orientation)
+        qx, qy, qz, qw = orientation
+
+        # Format the data in TUM format
+        tum_data = f"{timestamp} {x} {y} {z} {qx} {qy} {qz} {qw}"
+
+        # For this example, we print the data, but you can choose to write it to a file or handle it differently
+        print(tum_data)
+
+    def robot_odom_callback(self, odom):
+        if self.flag:
+            self.flag = False
+            pose = odom.pose.pose
+            self.init_pose = self.pos_to_state(pose)
+            return
+        self.world_frame = odom.header.frame_id
+        self.robot_frame = odom.child_frame_id
+        self.odom_world_robot = odom
+        self.curr_pose = [
+            self.odom_world_robot.pose.pose.position.x,
+            self.odom_world_robot.pose.pose.position.y,
+            self.quat_to_yaw(self.odom_world_robot.pose.pose.orientation),
+        ]
+
+        # Output TUM format data
+        self.output_tum_format(odom)
 
     def dyn_callback(self, config, level):
         self.vel_ref = config["speed_target"]
