@@ -93,7 +93,7 @@ class PathTrackerNode1:
 
 
     def computeControlOutputs(self, odom_robot, pose_goal):
-        u = self.opti.solve(odom_robot, pose_goal, [[0]*2]*self.N)
+        u = self.opti.solve(odom_robot, pose_goal, [[0.5, 0]]*self.N)
         # # 计算控制输出
         # q_robot = tf2_ros.Quaternion.from_msg(odom_robot.pose.pose.orientation)
         # q_goal = tf2_ros.Quaternion.from_msg(pose_goal.orientation)
